@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Threat Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#threat-log"><i class="fas fa-exclamation-triangle"></i> Threat Log</a></li>
+        <li><a href="#dark-web-monitoring"><i class="fas fa-globe"></i> Dark Web Monitoring</a></li>
+        <li><a href="#settings"><i class="fas fa-cog"></i> Settings</a></li>
+      </ul>
+    </nav>
+
+    <main class="dashboard">
+      <header class="dashboard-header">
+        <h1>Real-Time Threat Detection</h1>
+        <button id="manual-threat" onclick="addManualThreat()">Add Threat</button>
+      </header>
+
+      <div class="card threat-graph">
+        <h2>Threat Level Graph</h2>
+        <canvas id="threatChart"></canvas>
+      </div>
+
+      <div class="card alerts">
+        <h2>Recent Threat Levels</h2>
+        <ul id="threat-log"></ul>
+      </div>
+    </main>
+  </div>
+
+  <div id="loading" class="loading-spinner" style="display: none;">Loading...</div>
+
+  <script src="script.js"></script>
+  <script>
+    let threatLog = document.getElementById('threat-log');
+
+    // Function to show loading spinner
+    function showLoading() {
+        document.getElementById('loading').style.display = 'block';
+    }
+
+    // Function to hide loading spinner
+    function hideLoading() {
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    // Example function to add a manual threat (placeholder)
+    function addManualThreat() {
+        const newThreat = document.createElement('li');
+        newThreat.textContent = `Manual Threat Added at ${new Date().toLocaleTimeString()}`;
+        threatLog.appendChild(newThreat);
+    }
+
+    // Socket.io setup to receive threat data
+    const socket = io();
+
+    // Chart.js setup
+    const ctx = document.getElementById('threatChart').getContext('2d');
+    const threatChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [], // Time labels
+            datasets: [{
+                label: 'Threat Levels',
+                data: [], // Threat levels data
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5 // Adjust based on your threat levels
+                }
+            }
+        }
+    });
+
+    // Notify user with a message
+    function notifyUser(message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 3000); // Remove after 3 seconds
+    }
+
+    socket.on('newThreatData', (data) => {
+        hideLoading();
+        const newThreat = document.createElement('li');
+        newThreat.textContent = `Threat Level: ${data.threatLevel} at ${data.time}`;
+        newThreat.classList.add(`threat-level-${data.threatLevel}`);
+        threatLog.appendChild(newThreat);
+
+        // Update chart
+        threatChart.data.labels.push(data.time); // Add the new time
+        threatChart.data.datasets[0].data.push(data.threatLevel); // Add the new threat level
+        threatChart.update(); // Refresh the chart
+
+        // Notify user of new threat
+        notifyUser(`New threat level detected: ${data.threatLevel}`);
+    });
+
+    // Show loading spinner on initial load
+    showLoading();
+  </script>
+</body>
+</html>
